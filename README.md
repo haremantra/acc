@@ -102,6 +102,21 @@ If `/acc` isn't recognized, restart Claude Code and check that `SKILL.md` lives 
 | `assets/docs-acc-readme.md` | README seed dropped into `docs/acc/` on first run |
 | `references/necessity-check.md` | The Step 0 rubric, 9 criteria for `acc` vs. `HANDOFF` |
 | `references/example-acc.md` | Good vs. bad worked example |
+| `tests/test_scripts.py` | Unit tests for the two helper scripts |
+
+## Running the tests
+
+The helper scripts are deterministic, so they're covered by a stdlib-only
+test suite (no `pip` install needed). From the repo root:
+
+```bash
+python -m unittest discover -s tests
+```
+
+The tests pin the two behaviors the skill must get right every time:
+latest-entry selection (lexicographic sort, `README.md` excluded) and
+next-entry numbering (zero-padded, monotonic), plus slug generation,
+template substitution, and the scripts' exit codes.
 
 ## Update
 
