@@ -1,5 +1,7 @@
 # acc
 
+[![CI](https://github.com/haremantra/acc/actions/workflows/ci.yml/badge.svg)](https://github.com/haremantra/acc/actions/workflows/ci.yml)
+
 A Claude Code skill for ending a session and not having to re-explain it to the next one.
 
 ## What it does
