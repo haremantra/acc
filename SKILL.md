@@ -146,6 +146,19 @@ If found, add the missing item to the appropriate dimension.
 5. Never compress governing document citations (ADR-001A, ICS-001, REQ-004) — these are load-bearing references
 6. **Don't run ACC on momentum.** If Step 0 says HANDOFF covers it, abort and surface the rubric finding to the user. Producing a low-leverage ACC trains the habit of running it everywhere — which dilutes the archive and makes the high-value entries harder to find later
 
+## Gotchas
+
+Highest-signal failure points, accreted from real runs. Read before invoking — most apply to Mode A.
+
+- **Don't run ACC on momentum** (the most common misuse). If Step 0's necessity check favors HANDOFF, abort and surface the finding. A low-leverage ACC dilutes the archive and buries the high-value entries — see Rule 6 and `references/necessity-check.md`.
+- **Scripts write to the *current working directory*, not a global path.** Entries land in `./docs/acc/` of wherever Claude Code is running. If they show up in the wrong project, check the working directory before re-running — don't move files by hand.
+- **Windows: invoke scripts as `python`, not `python3`.** The `python3` alias usually resolves to the Microsoft Store shim, which fails silently or opens the Store. Use `python "<skill-dir>/scripts/new_acc.py" …`.
+- **Never rename archive files out of `NNN-YYYY-MM-DD-topic` order.** Latest-ACC selection is a lexicographic sort on filename; off-convention names break `find_latest_acc.py` and Mode B. `README.md` is excluded by design — don't give it a number.
+- **`git` "dubious ownership" on FAT/exFAT or network shares.** Mark the repo safe once: `git config --global --add safe.directory <path>` (or `git -c safe.directory=<path> …` for a single command).
+- **Every script-backed step has a manual fallback — use it, don't abort.** If Python can't run: Mode B → glob `docs/acc/*.md`, skip `README.md`, take the lexicographically highest; Mode A → write the `assets/acc-template.md` shape yourself as `docs/acc/NNN-YYYY-MM-DD-topic.md` with the next `NNN`.
+
+The README's Troubleshooting section carries longer-form fixes for the install/path issues above.
+
 ## Bundled resources
 
 This skill ships with helper files in its own directory (`<skill-dir>` = the folder containing this `SKILL.md`; Claude Code makes this path available when the skill runs). Only one install is active at a time, so substitute that install's absolute path.
