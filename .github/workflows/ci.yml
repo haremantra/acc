@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - claude/**
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref so rapid pushes don't pile up.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: the tests only read the checkout.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        python-version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # The skill ships to Windows users, where `python3` usually resolves to
+      # the Microsoft Store shim and fails silently. Enforce that plain
+      # `python` is a real interpreter of the expected version before testing.
+      - name: Verify interpreter (guards the Windows python3 shim gotcha)
+        shell: bash
+        run: |
+          python -c "import sys; print(sys.version); print(sys.executable)"
+          python -c "import sys; assert sys.version_info[:2] == tuple(int(p) for p in '${{ matrix.python-version }}'.split('.')), sys.version"
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
