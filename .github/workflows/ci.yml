@@ -81,3 +81,19 @@ jobs:
 
       - name: Run tests
         run: python -m unittest discover -s tests -v
+
+  # Single stable check for branch protection to require: it depends on the
+  # whole matrix, so adding/dropping a Python or OS never needs a protection
+  # edit. `if: always()` makes it run even when a job fails, so it reports the
+  # failure instead of being skipped (a skipped required check blocks merge).
+  ci-ok:
+    name: ci-ok
+    needs: [lint, test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all required jobs passed
+        run: |
+          echo "lint=${{ needs.lint.result }} test=${{ needs.test.result }}"
+          [ "${{ needs.lint.result }}" = "success" ] && [ "${{ needs.test.result }}" = "success" ]
+
