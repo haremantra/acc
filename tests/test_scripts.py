@@ -11,10 +11,13 @@ time: which file is the *latest* ACC (Mode B) and what the *next* entry is
 named (Mode A). These tests pin that behavior so a refactor can't silently
 break selection or numbering.
 """
+
 from __future__ import annotations
 
 import importlib.util
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -89,9 +92,6 @@ class FindLatestTests(unittest.TestCase):
 
     def test_main_success_exit_0_and_prints_path(self) -> None:
         _touch(self.dir, "001-2026-01-01-alpha.md")
-        from io import StringIO
-        from contextlib import redirect_stdout
-
         buf = StringIO()
         with redirect_stdout(buf):
             rc = find_latest_acc.main(["--dir", str(self.dir)])

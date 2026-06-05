@@ -20,6 +20,32 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Pinned so a new ruff release can't turn CI red without a deliberate bump.
+      - name: Install ruff
+        run: pip install "ruff==0.15.16"
+
+      - name: Lint (ruff check)
+        run: ruff check .
+
+      - name: Format check (ruff format)
+        run: ruff format --check .
+
+      # Zero-config syntax gate; catches a broken file even if ruff is happy.
+      - name: Byte-compile
+        run: python -m compileall scripts tests
+
   test:
     name: test (${{ matrix.os }}, py${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}

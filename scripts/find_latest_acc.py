@@ -9,6 +9,7 @@ Usage:
     python find_latest_acc.py             # looks for ./docs/acc relative to cwd
     python find_latest_acc.py --dir PATH  # override the docs/acc directory
 """
+
 from __future__ import annotations
 
 import argparse
@@ -19,9 +20,7 @@ from pathlib import Path
 def find_latest(acc_dir: Path) -> Path | None:
     if not acc_dir.is_dir():
         return None
-    candidates = sorted(
-        p for p in acc_dir.glob("*.md") if p.name.lower() != "readme.md"
-    )
+    candidates = sorted(p for p in acc_dir.glob("*.md") if p.name.lower() != "readme.md")
     return candidates[-1] if candidates else None
 
 
