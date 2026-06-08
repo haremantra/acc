@@ -12,6 +12,7 @@ Usage:
     python new_acc.py --topic auth-rewrite
     python new_acc.py --topic auth-rewrite --focus "auth middleware" --date 2026-05-27
 """
+
 from __future__ import annotations
 
 import argparse
@@ -48,7 +49,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--topic", required=True, help="Short focus slug, e.g. auth-rewrite.")
     parser.add_argument("--focus", default="", help="Human-readable focus (defaults to topic).")
     parser.add_argument("--date", default="", help="YYYY-MM-DD (default: today).")
-    parser.add_argument("--dir", default="docs/acc", help="Archive dir (default: docs/acc under cwd).")
+    parser.add_argument(
+        "--dir", default="docs/acc", help="Archive dir (default: docs/acc under cwd)."
+    )
     args = parser.parse_args(argv)
 
     if not TEMPLATE.is_file():
@@ -56,9 +59,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     try:
-        date = (
-            _dt.date.fromisoformat(args.date) if args.date else _dt.date.today()
-        ).isoformat()
+        date = (_dt.date.fromisoformat(args.date) if args.date else _dt.date.today()).isoformat()
     except ValueError:
         print(f"Invalid --date {args.date!r} (expected YYYY-MM-DD).", file=sys.stderr)
         return 2

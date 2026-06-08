@@ -1,5 +1,7 @@
 # acc
 
+[![CI](https://github.com/haremantra/acc/actions/workflows/ci.yml/badge.svg)](https://github.com/haremantra/acc/actions/workflows/ci.yml)
+
 A Claude Code skill for ending a session and not having to re-explain it to the next one.
 
 ## What it does
@@ -102,6 +104,34 @@ If `/acc` isn't recognized, restart Claude Code and check that `SKILL.md` lives 
 | `assets/docs-acc-readme.md` | README seed dropped into `docs/acc/` on first run |
 | `references/necessity-check.md` | The Step 0 rubric, 9 criteria for `acc` vs. `HANDOFF` |
 | `references/example-acc.md` | Good vs. bad worked example |
+| `tests/test_scripts.py` | Unit tests for the two helper scripts |
+| `tests/test_skill_integrity.py` | Checks SKILL.md frontmatter, bundled-file existence, template-token contract |
+| `ruff.toml` | Lint/format config (CI's `lint` job) |
+
+## Running the tests
+
+The helper scripts are deterministic, so they're covered by a stdlib-only
+test suite (no `pip` install needed). From the repo root:
+
+```bash
+python -m unittest discover -s tests
+```
+
+The suite covers two layers. `test_scripts.py` pins the behaviors the
+helper scripts must get right every time: latest-entry selection
+(lexicographic sort, `README.md` excluded) and next-entry numbering
+(zero-padded, monotonic), plus slug generation, template substitution,
+and exit codes. `test_skill_integrity.py` validates the bundle itself —
+SKILL.md frontmatter, that every bundled file it advertises exists, and
+that every `{{TOKEN}}` the scaffolder substitutes is present in the
+template (so a rename never ships a literal `{{DATE}}` to users).
+
+CI also runs `ruff check`, `ruff format --check`, and `compileall` over
+`scripts/` and `tests/`; reproduce that locally with:
+
+```bash
+ruff check . && ruff format --check .
+```
 
 ## Update
 

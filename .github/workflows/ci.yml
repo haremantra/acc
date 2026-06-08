@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - claude/**
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref so rapid pushes don't pile up.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: the tests only read the checkout.
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Pinned so a new ruff release can't turn CI red without a deliberate bump.
+      - name: Install ruff
+        run: pip install "ruff==0.15.16"
+
+      - name: Lint (ruff check)
+        run: ruff check .
+
+      - name: Format check (ruff format)
+        run: ruff format --check .
+
+      # Zero-config syntax gate; catches a broken file even if ruff is happy.
+      - name: Byte-compile
+        run: python -m compileall scripts tests
+
+  test:
+    name: test (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        python-version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # The skill ships to Windows users, where `python3` usually resolves to
+      # the Microsoft Store shim and fails silently. Enforce that plain
+      # `python` is a real interpreter of the expected version before testing.
+      - name: Verify interpreter (guards the Windows python3 shim gotcha)
+        shell: bash
+        run: |
+          python -c "import sys; print(sys.version); print(sys.executable)"
+          python -c "import sys; assert sys.version_info[:2] == tuple(int(p) for p in '${{ matrix.python-version }}'.split('.')), sys.version"
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
+  # Single stable check for branch protection to require: it depends on the
+  # whole matrix, so adding/dropping a Python or OS never needs a protection
+  # edit. `if: always()` makes it run even when a job fails, so it reports the
+  # failure instead of being skipped (a skipped required check blocks merge).
+  ci-ok:
+    name: ci-ok
+    needs: [lint, test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all required jobs passed
+        run: |
+          echo "lint=${{ needs.lint.result }} test=${{ needs.test.result }}"
+          [ "${{ needs.lint.result }}" = "success" ] && [ "${{ needs.test.result }}" = "success" ]
+
