@@ -104,7 +104,7 @@ Create the output file by running, from the project root:
 python "<skill-dir>/scripts/new_acc.py" --topic <slug> --focus "<focus area>"
 ```
 
-(`python3` on macOS/Linux; `<skill-dir>` is this skill's directory — see [Bundled resources](#bundled-resources). Add `--date YYYY-MM-DD` only to override today.) The script computes the next zero-padded `NNN`, seeds `docs/acc/README.md` on first run, renders `assets/acc-template.md`, and writes `docs/acc/NNN-YYYY-MM-DD-topic.md`, printing the path.
+(`python3` on macOS/Linux; `<skill-dir>` is this skill's directory — see [Bundled resources](#bundled-resources). Add `--date YYYY-MM-DD` only to override today; add `--dry-run` to print the path and next `NNN` without writing.) The script computes the next zero-padded `NNN`, seeds `docs/acc/README.md` on first run, renders `assets/acc-template.md`, and writes `docs/acc/NNN-YYYY-MM-DD-topic.md`, printing the path.
 
 Then **fill the five sections** in that file (the script scaffolds the skeleton only) and replace the `{{TOKENS_BEFORE}}` / `{{TOKENS_AFTER}}` placeholders with your estimates. The canonical format is `assets/acc-template.md`; its shape is:
 
@@ -167,8 +167,11 @@ This skill ships with helper files in its own directory (`<skill-dir>` = the fol
 |---|---|---|
 | `scripts/new_acc.py` | Step 3 (Mode A) | Compute next `NNN`, seed archive README, render template, write `docs/acc/NNN-YYYY-MM-DD-topic.md` |
 | `scripts/find_latest_acc.py` | Mode B step 2 | Print the newest ACC path (glob + lexicographic sort, README excluded); non-zero if archive empty/missing |
+| `scripts/list_acc.py` | (browsing) | Print the archive as a dated, focus-labeled index; `--markdown` for a README table |
+| `scripts/acc_session_start.py` | (Mode B, automated) | SessionStart hook that auto-loads the latest ACC into a fresh session; exit-0-safe |
 | `assets/acc-template.md` | Step 3 | Canonical output skeleton with `{{DATE}}` / `{{FOCUS}}` / `{{TOKENS_*}}` tokens |
 | `assets/docs-acc-readme.md` | (by `new_acc.py`) | README seed dropped into `docs/acc/` on first run |
+| `assets/session-start-settings.json` | (setup) | Example `.claude/settings.json` wiring the SessionStart hook |
 | `references/necessity-check.md` | Step 0 | The 9-criterion ACC-vs-HANDOFF rubric; read on demand |
 | `references/example-acc.md` | Step 1–2 | Good vs bad worked example; read to calibrate the quality bar |
 

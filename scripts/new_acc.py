@@ -52,6 +52,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--dir", default="docs/acc", help="Archive dir (default: docs/acc under cwd)."
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the path that would be created (it includes the next NNN) without writing.",
+    )
     args = parser.parse_args(argv)
 
     if not TEMPLATE.is_file():
@@ -67,19 +72,27 @@ def main(argv: list[str] | None = None) -> int:
     focus = args.focus.strip() or args.topic.strip()
     slug = slugify(args.topic)
 
+    # next_seq tolerates a missing dir, so we can compute the target path
+    # before creating anything — required for an honest --dry-run.
     acc_dir = Path(args.dir).resolve()
+    seq = next_seq(acc_dir)
+    out = acc_dir / f"{seq:03d}-{date}-{slug}.md"
+
+    if out.exists():
+        print(f"Refusing to overwrite existing {out}", file=sys.stderr)
+        return 3
+
+    if args.dry_run:
+        # No mkdir, no README seed, no write — just report the plan.
+        print(out)
+        return 0
+
     acc_dir.mkdir(parents=True, exist_ok=True)
 
     # Seed the archive README on first run.
     readme = acc_dir / "README.md"
     if not readme.exists() and README_SEED.is_file():
         readme.write_text(README_SEED.read_text(encoding="utf-8"), encoding="utf-8")
-
-    seq = next_seq(acc_dir)
-    out = acc_dir / f"{seq:03d}-{date}-{slug}.md"
-    if out.exists():
-        print(f"Refusing to overwrite existing {out}", file=sys.stderr)
-        return 3
 
     body = TEMPLATE.read_text(encoding="utf-8")
     body = body.replace("{{DATE}}", date).replace("{{FOCUS}}", focus)

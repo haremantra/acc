@@ -182,6 +182,26 @@ class NewAccMainTests(unittest.TestCase):
     def test_invalid_date_exit_2(self) -> None:
         self.assertEqual(self._run("--topic", "alpha", "--date", "not-a-date"), 2)
 
+    def test_dry_run_prints_path_without_writing(self) -> None:
+        buf = StringIO()
+        with redirect_stdout(buf):
+            rc = self._run("--topic", "alpha", "--date", "2026-01-01", "--dry-run")
+        self.assertEqual(rc, 0)
+        self.assertIn("001-2026-01-01-alpha.md", buf.getvalue())
+        # Nothing should have been created on disk.
+        self.assertFalse((self.dir / "001-2026-01-01-alpha.md").exists())
+        self.assertFalse((self.dir / "README.md").exists())
+        self.assertFalse(self.dir.exists())
+
+    def test_dry_run_reports_next_seq(self) -> None:
+        self._run("--topic", "alpha", "--date", "2026-01-01")
+        buf = StringIO()
+        with redirect_stdout(buf):
+            rc = self._run("--topic", "beta", "--date", "2026-01-02", "--dry-run")
+        self.assertEqual(rc, 0)
+        self.assertIn("002-2026-01-02-beta.md", buf.getvalue())
+        self.assertFalse((self.dir / "002-2026-01-02-beta.md").exists())
+
     def test_refuses_overwrite_exit_3(self) -> None:
         # The guard is defensive: under normal flow next_seq is always fresh,
         # so a collision only happens if numbering is forced backwards. Pin

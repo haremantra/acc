@@ -63,19 +63,21 @@ git clone https://github.com/haremantra/acc.git "%USERPROFILE%\.claude\skills\ac
 
 ### Alternative: clone elsewhere and symlink (development workflow)
 
-Useful if you want the working tree in `~/code/` (or somewhere else) and just want to expose it to Claude Code through a link.
+Useful if you want the working tree in `~/code/` (or somewhere else) and just want to expose it to Claude Code through a link. From inside the clone, the bundled installer does the symlink and verifies it for you:
 
 **macOS / Linux:**
 ```bash
 git clone https://github.com/haremantra/acc.git ~/code/acc
-ln -s ~/code/acc ~/.claude/skills/acc
+cd ~/code/acc && ./install.sh          # or: make install  (add --copy to copy instead of symlink)
 ```
 
 **Windows (PowerShell, run as Administrator or with Developer Mode on):**
 ```powershell
 git clone https://github.com/haremantra/acc.git C:\code\acc
-New-Item -ItemType SymbolicLink -Path "$HOME\.claude\skills\acc" -Target "C:\code\acc"
+cd C:\code\acc; ./install.ps1           # add -Copy to copy instead of symlink
 ```
+
+Remove it later with `make uninstall` (or just delete `~/.claude/skills/acc`).
 
 ## Verify
 
@@ -93,19 +95,52 @@ The skill will first decide whether the session even warrants an `acc` (that's t
 
 If `/acc` isn't recognized, restart Claude Code and check that `SKILL.md` lives at the expected path: `~/.claude/skills/acc/SKILL.md` on macOS/Linux, or `%USERPROFILE%\.claude\skills\acc\SKILL.md` on Windows.
 
+## Auto-load on session start (optional)
+
+Typing `/acc invoke-last` every time is easy to forget. A `SessionStart` hook makes it automatic: every new session in a project that has a `docs/acc/` archive inherits the latest entry, no command needed. Copy `assets/session-start-settings.json` into the project's `.claude/settings.json` (merge it if the file already exists):
+
+```jsonc
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          { "type": "command", "command": "python3 \"$HOME/.claude/skills/acc/scripts/acc_session_start.py\"", "timeout": 15 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+On Windows use `python` and `%USERPROFILE%`. The hook is exit-0-safe (a misfire never blocks startup) and stays silent in projects with no archive, so it's safe to set globally in `~/.claude/settings.json`. `matcher: "startup"` fires on new sessions only, not resumes.
+
+## Browse the archive
+
+Once an archive has more than a handful of entries:
+
+```bash
+python scripts/list_acc.py                 # dated, focus-labeled table, newest first
+python scripts/list_acc.py --markdown      # Markdown table you can paste into a README index
+```
+
 ## Layout
 
 | Path | Purpose |
 |---|---|
 | `SKILL.md` | Skill definition: process steps, rules, bundled resources |
-| `scripts/new_acc.py` | Scaffold a new `acc` entry (produce mode) |
+| `scripts/new_acc.py` | Scaffold a new `acc` entry (produce mode); `--dry-run` to preview |
 | `scripts/find_latest_acc.py` | Locate the newest entry (consume mode) |
+| `scripts/list_acc.py` | Print the archive as an index (`--markdown` for a table) |
+| `scripts/acc_session_start.py` | SessionStart hook: auto-load the latest entry into a fresh session |
 | `assets/acc-template.md` | Canonical output skeleton |
 | `assets/docs-acc-readme.md` | README seed dropped into `docs/acc/` on first run |
+| `assets/session-start-settings.json` | Example `.claude/settings.json` for the hook |
 | `references/necessity-check.md` | The Step 0 rubric, 9 criteria for `acc` vs. `HANDOFF` |
 | `references/example-acc.md` | Good vs. bad worked example |
-| `tests/test_scripts.py` | Unit tests for the two helper scripts |
-| `tests/test_skill_integrity.py` | Checks SKILL.md frontmatter, bundled-file existence, template-token contract |
+| `tests/` | Unit, skill-integrity, and usability tests (stdlib `unittest`) |
+| `install.sh` / `install.ps1` / `Makefile` | One-command install + dev targets |
 | `ruff.toml` | Lint/format config (CI's `lint` job) |
 
 ## Running the tests
