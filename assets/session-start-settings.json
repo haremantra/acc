@@ -1,0 +1,17 @@
+{
+  "comment": "Drop this into a project's .claude/settings.json to auto-load the latest ACC at session start (Mode B, automated). macOS/Linux uses python3 and $HOME; on Windows use python and %USERPROFILE%. Adjust the path if your skills dir differs. matcher 'startup' fires on new sessions only (not resume).",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.claude/skills/acc/scripts/acc_session_start.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
