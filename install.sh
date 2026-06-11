@@ -24,11 +24,15 @@ fi
 
 mkdir -p "$SKILLS_DIR"
 
-# Clear a prior install (only if it's our symlink or a dir we can replace).
+# Clear a prior install. A symlink is always ours to replace; a real
+# directory is only replaced in --copy mode (a prior copy install), keeping
+# the command idempotent without clobbering something unexpected.
 if [ -L "$DEST" ]; then
   rm "$DEST"
+elif [ -d "$DEST" ] && [ "$MODE" = "copy" ]; then
+  rm -rf "$DEST"
 elif [ -e "$DEST" ]; then
-  echo "error: $DEST already exists and is not a symlink." >&2
+  echo "error: $DEST already exists and is not replaceable in $MODE mode." >&2
   echo "       Remove it first if you want to reinstall." >&2
   exit 1
 fi

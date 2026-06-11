@@ -56,8 +56,12 @@ def _cwd_from_stdin() -> str | None:
 
 def build_context(latest: Path) -> str:
     body = latest.read_text(encoding="utf-8")
-    if len(body.encode("utf-8")) > MAX_BYTES:
-        body = body[:MAX_BYTES] + "\n\n[...truncated; open the file for the full entry]"
+    encoded = body.encode("utf-8")
+    if len(encoded) > MAX_BYTES:
+        # Slice by bytes (not characters) so the cap holds for non-ASCII;
+        # errors="ignore" drops a trailing partial multibyte char cleanly.
+        body = encoded[:MAX_BYTES].decode("utf-8", errors="ignore")
+        body += "\n\n[...truncated; open the file for the full entry]"
     return (
         f"Inherited context from a prior session, auto-loaded from "
         f"docs/acc/{latest.name} by the ACC SessionStart hook. This is a "

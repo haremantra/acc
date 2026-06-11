@@ -55,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Print the path that would be created (and next NNN) without writing anything.",
+        help="Print the path that would be created (it includes the next NNN) without writing.",
     )
     args = parser.parse_args(argv)
 
