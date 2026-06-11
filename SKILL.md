@@ -28,7 +28,7 @@ The user wants to load a prior ACC into the current session as inherited context
 
 Steps:
 1. **Locate the archive directory.** Check `docs/acc/` in the current working directory. If it doesn't exist, report `No docs/acc/ archive found in current directory — nothing to invoke` and stop. Suggest the user `cd` into the right project or reference a specific ACC path.
-2. **Find the latest ACC.** From the project root, run `python "<skill-dir>/scripts/find_latest_acc.py"` (`python3` on macOS/Linux), where `<skill-dir>` is this skill's directory — see [Bundled resources](#bundled-resources). It globs `docs/acc/*.md`, excludes `README.md`, sorts lexicographically, and prints the newest path; it exits non-zero with a message if the archive is missing or empty. **Fallback** (if you can't run the script): glob `docs/acc/*.md` yourself, skip `README.md`, and take the lexicographically highest filename — convention `NNN-YYYY-MM-DD-topic.md`, so highest `NNN` is most recent.
+2. **Find the latest ACC.** From the project root, run `python "<skill-dir>/scripts/find_latest_acc.py"` (`python3` on macOS/Linux), where `<skill-dir>` is this skill's directory — see [Bundled resources](#bundled-resources). It globs `docs/acc/*.md`, excludes `README.md`, sorts lexicographically, and prints the newest path; it exits non-zero with a message if the archive is missing or empty. (Add `--global` to read the cross-project archive at `~/.claude/acc` instead.) **Fallback** (if you can't run the script): glob `docs/acc/*.md` yourself, skip `README.md`, and take the lexicographically highest filename — convention `NNN-YYYY-MM-DD-topic.md`, so highest `NNN` is most recent.
 3. **Read the file** via the Read tool (full file, no offset/limit).
 4. **Acknowledge** in one or two sentences: *"Loaded ACC NNN — [date] [focus from header]. Continuing from there."* Surface any unblocked next-actions or open questions worth flagging.
 5. **Do NOT run Step 0 necessity check** — that gate is for production. Consumption is always cheap (the file is small by construction; that's the whole point).
@@ -104,7 +104,7 @@ Create the output file by running, from the project root:
 python "<skill-dir>/scripts/new_acc.py" --topic <slug> --focus "<focus area>"
 ```
 
-(`python3` on macOS/Linux; `<skill-dir>` is this skill's directory — see [Bundled resources](#bundled-resources). Add `--date YYYY-MM-DD` only to override today; add `--dry-run` to print the path and next `NNN` without writing.) The script computes the next zero-padded `NNN`, seeds `docs/acc/README.md` on first run, renders `assets/acc-template.md`, and writes `docs/acc/NNN-YYYY-MM-DD-topic.md`, printing the path.
+(`python3` on macOS/Linux; `<skill-dir>` is this skill's directory — see [Bundled resources](#bundled-resources). Add `--date YYYY-MM-DD` only to override today; add `--dry-run` to print the path and next `NNN` without writing; add `--global` to write the cross-project archive at `~/.claude/acc` instead of `docs/acc/`.) The script computes the next zero-padded `NNN`, seeds `docs/acc/README.md` on first run, renders `assets/acc-template.md`, and writes `docs/acc/NNN-YYYY-MM-DD-topic.md`, printing the path.
 
 Then **fill the five sections** in that file (the script scaffolds the skeleton only) and replace the `{{TOKENS_BEFORE}}` / `{{TOKENS_AFTER}}` placeholders with your estimates. The canonical format is `assets/acc-template.md`; its shape is:
 
@@ -151,7 +151,7 @@ If found, add the missing item to the appropriate dimension.
 Highest-signal failure points, accreted from real runs. Read before invoking — most apply to Mode A.
 
 - **Don't run ACC on momentum** (the most common misuse). If Step 0's necessity check favors HANDOFF, abort and surface the finding. A low-leverage ACC dilutes the archive and buries the high-value entries — see Rule 6 and `references/necessity-check.md`.
-- **Scripts write to the *current working directory*, not a global path.** Entries land in `./docs/acc/` of wherever Claude Code is running. If they show up in the wrong project, check the working directory before re-running — don't move files by hand.
+- **Scripts write to the *current working directory*, not a global path.** Entries land in `./docs/acc/` of wherever Claude Code is running. If they show up in the wrong project, check the working directory before re-running — don't move files by hand. (Prefer one shared archive across projects? Pass `--global` to write/read `~/.claude/acc` instead, overridable with `$ACC_GLOBAL_DIR`.)
 - **Windows: invoke scripts as `python`, not `python3`.** The `python3` alias usually resolves to the Microsoft Store shim, which fails silently or opens the Store. Use `python "<skill-dir>/scripts/new_acc.py" …`.
 - **Never rename archive files out of `NNN-YYYY-MM-DD-topic` order.** Latest-ACC selection is a lexicographic sort on filename; off-convention names break `find_latest_acc.py` and Mode B. `README.md` is excluded by design — don't give it a number.
 - **`git` "dubious ownership" on FAT/exFAT or network shares.** Mark the repo safe once: `git config --global --add safe.directory <path>` (or `git -c safe.directory=<path> …` for a single command).

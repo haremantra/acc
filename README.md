@@ -125,6 +125,18 @@ python scripts/list_acc.py                 # dated, focus-labeled table, newest 
 python scripts/list_acc.py --markdown      # Markdown table you can paste into a README index
 ```
 
+## Global vs per-project archive
+
+By default every entry lands in `./docs/acc/` of the project you're in — checkpoints live with the code they describe. If you'd rather keep **one archive across all projects** (handy when you hop between many repos), pass `--global` to any of the scripts:
+
+```bash
+python scripts/new_acc.py --topic auth-rewrite --global   # writes ~/.claude/acc/NNN-…md
+python scripts/find_latest_acc.py --global                # newest across all projects
+python scripts/list_acc.py --global                       # browse the global archive
+```
+
+The global location is `~/.claude/acc`, overridable with the `ACC_GLOBAL_DIR` environment variable. `--global` and `--dir` are mutually exclusive. For the SessionStart hook, append `--global` to the command in `settings.json` to auto-load from the shared archive instead of the project one.
+
 ## Layout
 
 | Path | Purpose |

@@ -10,11 +10,13 @@ Usage:
     python list_acc.py                 # aligned text table, newest first
     python list_acc.py --markdown      # GitHub-flavored table (for a README index)
     python list_acc.py --dir PATH      # override the docs/acc directory
+    python list_acc.py --global        # the cross-project archive
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from pathlib import Path
@@ -24,6 +26,12 @@ from typing import NamedTuple
 ENTRY_RE = re.compile(r"^(\d{3,})-(\d{4}-\d{2}-\d{2})-(.+)\.md$")
 # `**Focus:** the auth layer` header line in each entry.
 FOCUS_RE = re.compile(r"^\*\*Focus:\*\*\s*(.+?)\s*$", re.MULTILINE)
+
+
+def global_dir() -> Path:
+    """The cross-project archive: $ACC_GLOBAL_DIR if set, else ~/.claude/acc."""
+    env = os.environ.get("ACC_GLOBAL_DIR")
+    return Path(env) if env else Path.home() / ".claude" / "acc"
 
 
 class Entry(NamedTuple):
@@ -80,8 +88,13 @@ def render_markdown(entries: list[Entry]) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="List the ACC archive as an index.")
-    parser.add_argument(
-        "--dir", default="docs/acc", help="Archive dir (default: docs/acc under cwd)."
+    where = parser.add_mutually_exclusive_group()
+    where.add_argument("--dir", default=None, help="Archive dir (default: docs/acc under cwd).")
+    where.add_argument(
+        "--global",
+        dest="use_global",
+        action="store_true",
+        help="Use the cross-project archive (~/.claude/acc, or $ACC_GLOBAL_DIR).",
     )
     parser.add_argument(
         "--markdown",
@@ -90,7 +103,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    acc_dir = Path(args.dir).resolve()
+    acc_dir = (global_dir() if args.use_global else Path(args.dir or "docs/acc")).resolve()
     if not acc_dir.is_dir():
         print(f"No ACC archive found at {acc_dir} - nothing to list.", file=sys.stderr)
         return 1

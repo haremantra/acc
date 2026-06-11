@@ -10,11 +10,13 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO_ROOT / "scripts"
@@ -186,6 +188,54 @@ class SessionStartHookTests(unittest.TestCase):
         _, out = self._run()
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("truncated", ctx)
+
+    def test_truncation_cap_holds_for_non_ascii(self) -> None:
+        # 4-byte chars: a char-based slice would overshoot the byte cap.
+        big = "\U0001f600" * (acc_session_start.MAX_BYTES // 2)
+        (self.dir / "001-2026-01-01-alpha.md").write_text(big, encoding="utf-8")
+        _, out = self._run()
+        ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("truncated", ctx)
+        body = ctx.split("\n\n", 1)[1]
+        self.assertLessEqual(
+            len(body.encode("utf-8")),
+            acc_session_start.MAX_BYTES + 100,  # +100 for the truncation notice
+        )
+
+
+class GlobalArchiveUsabilityTests(unittest.TestCase):
+    """--global support in list_acc and the SessionStart hook."""
+
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        self.global_dir = Path(self._tmp.name) / "global-acc"
+        self.global_dir.mkdir(parents=True)
+        self.addCleanup(self._tmp.cleanup)
+        patcher = mock.patch.dict(os.environ, {"ACC_GLOBAL_DIR": str(self.global_dir)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        _entry(self.global_dir, "001-2026-01-01-alpha.md", "cross-project focus")
+
+    def test_list_acc_global(self) -> None:
+        buf = StringIO()
+        with redirect_stdout(buf):
+            rc = list_acc.main(["--global"])
+        self.assertEqual(rc, 0)
+        self.assertIn("cross-project focus", buf.getvalue())
+
+    def test_session_start_global(self) -> None:
+        buf = StringIO()
+        with redirect_stdout(buf):
+            rc = acc_session_start.main(["--global"])
+        self.assertEqual(rc, 0)
+        ctx = json.loads(buf.getvalue())["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("001-2026-01-01-alpha.md", ctx)
+
+    def test_session_start_dir_and_global_mutually_exclusive(self) -> None:
+        err = StringIO()
+        with self.assertRaises(SystemExit) as ctx, redirect_stderr(err):
+            acc_session_start.main(["--dir", str(self.global_dir), "--global"])
+        self.assertEqual(ctx.exception.code, 2)
 
 
 if __name__ == "__main__":

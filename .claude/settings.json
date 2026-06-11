@@ -1,0 +1,17 @@
+{
+  "$comment": "Dogfooding: future Claude Code sessions in THIS repo auto-load the latest docs/acc entry. The hook script lives in-repo, so we reference it via CLAUDE_PROJECT_DIR rather than the installed skill path. See README 'Auto-load on session start'.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/scripts/acc_session_start.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

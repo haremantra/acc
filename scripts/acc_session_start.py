@@ -21,6 +21,7 @@ back to the process cwd; `--dir` overrides both (used by tests).
 
 Usage (manual / test):
     python acc_session_start.py --dir docs/acc
+    python acc_session_start.py --global     # load from the cross-project archive
 """
 
 from __future__ import annotations
@@ -34,6 +35,12 @@ from pathlib import Path
 # Cap how much we inject; ACCs are tiny by design (<800 words), but guard
 # against a hand-edited monster file blowing up the context window.
 MAX_BYTES = 16_000
+
+
+def global_dir() -> Path:
+    """The cross-project archive: $ACC_GLOBAL_DIR if set, else ~/.claude/acc."""
+    env = os.environ.get("ACC_GLOBAL_DIR")
+    return Path(env) if env else Path.home() / ".claude" / "acc"
 
 
 def find_latest(acc_dir: Path) -> Path | None:
@@ -69,7 +76,7 @@ def build_context(latest: Path) -> str:
         body += "\n\n[...truncated; open the file for the full entry]"
     return (
         f"Inherited context from a prior session, auto-loaded from "
-        f"docs/acc/{latest.name} by the ACC SessionStart hook. This is a "
+        f"{latest} by the ACC SessionStart hook. This is a "
         f"compressed, lossy checkpoint — continue the work from it rather than "
         f"replaying earlier conversation. To reload manually later, run "
         f"`/acc invoke-last`.\n\n{body}"
@@ -78,15 +85,24 @@ def build_context(latest: Path) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="SessionStart hook: load latest ACC.")
-    parser.add_argument(
+    where = parser.add_mutually_exclusive_group()
+    where.add_argument(
         "--dir",
         default=None,
         help="Archive dir. Defaults to <cwd>/docs/acc (cwd from stdin or process).",
     )
+    where.add_argument(
+        "--global",
+        dest="use_global",
+        action="store_true",
+        help="Use the cross-project archive (~/.claude/acc, or $ACC_GLOBAL_DIR).",
+    )
     args = parser.parse_args(argv)
 
     try:
-        if args.dir is not None:
+        if args.use_global:
+            acc_dir = global_dir()
+        elif args.dir is not None:
             acc_dir = Path(args.dir)
         else:
             base = _cwd_from_stdin() or os.getcwd()
