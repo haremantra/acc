@@ -1,0 +1,17 @@
+{
+  "comment": "Dogfooding: future Claude Code sessions in THIS repo auto-load the latest docs/acc entry. SessionStart hooks run with cwd at the project root, so the command uses a relative path and the `python` launcher — the one spelling that works in both POSIX shells and cmd.exe (the repo's own gotchas: Windows `python3` is the Store shim, and `${VAR}` doesn't expand under cmd). Heads-up for maintainers: approving this hook runs whatever scripts/acc_session_start.py exists on the CURRENT checkout at session start — diff scripts/ before opening a session on an untrusted branch. See README 'Auto-load on session start'.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"scripts/acc_session_start.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

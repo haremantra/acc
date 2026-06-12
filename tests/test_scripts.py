@@ -15,11 +15,13 @@ break selection or numbering.
 from __future__ import annotations
 
 import importlib.util
+import os
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO_ROOT / "scripts"
@@ -217,6 +219,13 @@ class NewAccMainTests(unittest.TestCase):
         self.assertIn("002-2026-01-02-beta.md", buf.getvalue())
         self.assertFalse((self.dir / "002-2026-01-02-beta.md").exists())
 
+    def test_dir_and_global_are_mutually_exclusive(self) -> None:
+        err = StringIO()
+        with self.assertRaises(SystemExit) as ctx, redirect_stderr(err):
+            new_acc.main(["--topic", "a", "--dir", str(self.dir), "--global"])
+        self.assertEqual(ctx.exception.code, 2)
+        self.assertIn("not allowed with", err.getvalue())
+
     def test_refuses_overwrite_exit_3(self) -> None:
         # The guard is defensive: under normal flow next_seq is always fresh,
         # so a collision only happens if numbering is forced backwards. Pin
@@ -227,6 +236,77 @@ class NewAccMainTests(unittest.TestCase):
         new_acc.next_seq = lambda _dir: 1
         self.addCleanup(setattr, new_acc, "next_seq", original)
         self.assertEqual(self._run("--topic", "alpha", "--date", "2026-01-01"), 3)
+
+
+class GlobalArchiveTests(unittest.TestCase):
+    """--global routes the scripts at the cross-project archive."""
+
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        self.global_dir = Path(self._tmp.name) / "global-acc"
+        self.addCleanup(self._tmp.cleanup)
+        patcher = mock.patch.dict(os.environ, {"ACC_GLOBAL_DIR": str(self.global_dir)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_env_var_overrides_location(self) -> None:
+        self.assertEqual(new_acc.global_dir(), self.global_dir)
+        self.assertEqual(find_latest_acc.global_dir(), self.global_dir)
+
+    def test_default_location_is_under_home(self) -> None:
+        with mock.patch.dict(os.environ):
+            os.environ.pop("ACC_GLOBAL_DIR", None)
+            self.assertEqual(new_acc.global_dir(), Path.home() / ".claude" / "acc")
+
+    def test_global_dir_agrees_across_all_four_scripts(self) -> None:
+        # global_dir() is duplicated per script (standalone-script design); pin
+        # the four copies together so they cannot drift — the find_latest()
+        # duplication already required a two-site fix once (PR #4).
+        modules = [new_acc, find_latest_acc, _load("list_acc"), _load("acc_session_start")]
+        for module in modules:
+            with self.subTest(module=module.__name__, env="set"):
+                self.assertEqual(module.global_dir(), self.global_dir)
+        with mock.patch.dict(os.environ):
+            os.environ.pop("ACC_GLOBAL_DIR", None)
+            expected = Path.home() / ".claude" / "acc"
+            for module in modules:
+                with self.subTest(module=module.__name__, env="unset"):
+                    self.assertEqual(module.global_dir(), expected)
+
+    def test_dir_and_global_mutually_exclusive_in_readers(self) -> None:
+        # new_acc and acc_session_start pin this elsewhere; cover the two
+        # remaining copies of the copy-pasted flag wiring.
+        for module in (find_latest_acc, _load("list_acc")):
+            with self.subTest(module=module.__name__):
+                err = StringIO()
+                with self.assertRaises(SystemExit) as ctx, redirect_stderr(err):
+                    module.main(["--dir", str(self.global_dir), "--global"])
+                self.assertEqual(ctx.exception.code, 2)
+                self.assertIn("not allowed with", err.getvalue())
+
+    def test_new_acc_global_writes_to_global_archive(self) -> None:
+        buf = StringIO()
+        with redirect_stdout(buf):
+            rc = new_acc.main(["--topic", "alpha", "--date", "2026-01-01", "--global"])
+        self.assertEqual(rc, 0)
+        self.assertTrue((self.global_dir / "001-2026-01-01-alpha.md").is_file())
+
+    def test_find_latest_global_reads_global_archive(self) -> None:
+        with redirect_stdout(StringIO()):
+            new_acc.main(["--topic", "alpha", "--date", "2026-01-01", "--global"])
+        buf = StringIO()
+        with redirect_stdout(buf):
+            rc = find_latest_acc.main(["--global"])
+        self.assertEqual(rc, 0)
+        self.assertIn("001-2026-01-01-alpha.md", buf.getvalue())
+
+    def test_global_and_project_archives_are_independent(self) -> None:
+        # An entry produced globally must not affect project-dir numbering.
+        with redirect_stdout(StringIO()):
+            new_acc.main(["--topic", "alpha", "--date", "2026-01-01", "--global"])
+            project = Path(self._tmp.name) / "docs" / "acc"
+            new_acc.main(["--topic", "beta", "--date", "2026-01-02", "--dir", str(project)])
+        self.assertTrue((project / "001-2026-01-02-beta.md").is_file())
 
 
 if __name__ == "__main__":

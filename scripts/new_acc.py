@@ -11,12 +11,14 @@ The model fills the five body sections after this scaffolds the skeleton.
 Usage:
     python new_acc.py --topic auth-rewrite
     python new_acc.py --topic auth-rewrite --focus "auth middleware" --date 2026-05-27
+    python new_acc.py --topic auth-rewrite --global   # cross-project archive
 """
 
 from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import os
 import re
 import sys
 from pathlib import Path
@@ -27,6 +29,12 @@ TEMPLATE = ASSETS / "acc-template.md"
 README_SEED = ASSETS / "docs-acc-readme.md"
 
 SEQ_RE = re.compile(r"^(\d{3,})-")
+
+
+def global_dir() -> Path:
+    """The cross-project archive: $ACC_GLOBAL_DIR if set, else ~/.claude/acc."""
+    env = os.environ.get("ACC_GLOBAL_DIR")
+    return Path(env) if env else Path.home() / ".claude" / "acc"
 
 
 def next_seq(acc_dir: Path) -> int:
@@ -49,8 +57,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--topic", required=True, help="Short focus slug, e.g. auth-rewrite.")
     parser.add_argument("--focus", default="", help="Human-readable focus (defaults to topic).")
     parser.add_argument("--date", default="", help="YYYY-MM-DD (default: today).")
-    parser.add_argument(
-        "--dir", default="docs/acc", help="Archive dir (default: docs/acc under cwd)."
+    where = parser.add_mutually_exclusive_group()
+    where.add_argument("--dir", default=None, help="Archive dir (default: docs/acc under cwd).")
+    where.add_argument(
+        "--global",
+        dest="use_global",
+        action="store_true",
+        help="Use the cross-project archive (~/.claude/acc, or $ACC_GLOBAL_DIR).",
     )
     parser.add_argument(
         "--dry-run",
@@ -74,7 +87,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # next_seq tolerates a missing dir, so we can compute the target path
     # before creating anything — required for an honest --dry-run.
-    acc_dir = Path(args.dir).resolve()
+    acc_dir = (global_dir() if args.use_global else Path(args.dir or "docs/acc")).resolve()
     seq = next_seq(acc_dir)
     out = acc_dir / f"{seq:03d}-{date}-{slug}.md"
 

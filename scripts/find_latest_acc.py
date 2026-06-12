@@ -8,13 +8,21 @@ Exits non-zero with a clear message if the archive is missing or empty.
 Usage:
     python find_latest_acc.py             # looks for ./docs/acc relative to cwd
     python find_latest_acc.py --dir PATH  # override the docs/acc directory
+    python find_latest_acc.py --global    # the cross-project archive
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
+
+
+def global_dir() -> Path:
+    """The cross-project archive: $ACC_GLOBAL_DIR if set, else ~/.claude/acc."""
+    env = os.environ.get("ACC_GLOBAL_DIR")
+    return Path(env) if env else Path.home() / ".claude" / "acc"
 
 
 def find_latest(acc_dir: Path) -> Path | None:
@@ -30,14 +38,21 @@ def find_latest(acc_dir: Path) -> Path | None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Find the newest ACC entry.")
-    parser.add_argument(
+    where = parser.add_mutually_exclusive_group()
+    where.add_argument(
         "--dir",
-        default="docs/acc",
+        default=None,
         help="Path to the ACC archive directory (default: docs/acc under cwd).",
+    )
+    where.add_argument(
+        "--global",
+        dest="use_global",
+        action="store_true",
+        help="Use the cross-project archive (~/.claude/acc, or $ACC_GLOBAL_DIR).",
     )
     args = parser.parse_args(argv)
 
-    acc_dir = Path(args.dir).resolve()
+    acc_dir = (global_dir() if args.use_global else Path(args.dir or "docs/acc")).resolve()
     if not acc_dir.is_dir():
         print(f"No ACC archive found at {acc_dir} - nothing to invoke.", file=sys.stderr)
         return 1
