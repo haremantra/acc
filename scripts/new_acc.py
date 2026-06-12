@@ -121,10 +121,19 @@ def main(argv: list[str] | None = None) -> int:
     acc_dir.mkdir(parents=True, exist_ok=True)
 
     # Seed the archive README on first run; the global archive gets its own
-    # seed (it isn't a docs/acc/ and holds entries from many projects).
+    # seed (it isn't a docs/acc/ and holds entries from many projects). A
+    # global README still byte-identical to the project seed was written by a
+    # version that predated the global seed — stale tool output, not user
+    # content — so replace it.
     seed = GLOBAL_README_SEED if args.use_global else README_SEED
     readme = acc_dir / "README.md"
-    if not readme.exists() and seed.is_file():
+    stale = (
+        args.use_global
+        and readme.is_file()
+        and README_SEED.is_file()
+        and readme.read_text(encoding="utf-8") == README_SEED.read_text(encoding="utf-8")
+    )
+    if (not readme.exists() or stale) and seed.is_file():
         readme.write_text(seed.read_text(encoding="utf-8"), encoding="utf-8")
 
     body = TEMPLATE.read_text(encoding="utf-8")

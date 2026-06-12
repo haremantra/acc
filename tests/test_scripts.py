@@ -348,6 +348,26 @@ class GlobalArchiveTests(unittest.TestCase):
         readme = (project / "README.md").read_text(encoding="utf-8")
         self.assertIn("ACC Archive — `docs/acc/`", readme)
 
+    def test_stale_project_seed_in_global_archive_is_replaced(self) -> None:
+        # A global archive created before the global seed existed carries the
+        # project-oriented README verbatim; --global re-seeds it.
+        self.global_dir.mkdir(parents=True)
+        project_seed = new_acc.README_SEED.read_text(encoding="utf-8")
+        (self.global_dir / "README.md").write_text(project_seed, encoding="utf-8")
+        with redirect_stdout(StringIO()):
+            new_acc.main(["--topic", "alpha", "--date", "2026-01-01", "--global"])
+        readme = (self.global_dir / "README.md").read_text(encoding="utf-8")
+        self.assertIn("ACC Global Archive", readme)
+
+    def test_user_modified_global_readme_is_left_alone(self) -> None:
+        self.global_dir.mkdir(parents=True)
+        custom = "# My own notes about this archive\n"
+        (self.global_dir / "README.md").write_text(custom, encoding="utf-8")
+        with redirect_stdout(StringIO()):
+            new_acc.main(["--topic", "alpha", "--date", "2026-01-01", "--global"])
+        readme = (self.global_dir / "README.md").read_text(encoding="utf-8")
+        self.assertEqual(readme, custom)
+
 
 if __name__ == "__main__":
     unittest.main()

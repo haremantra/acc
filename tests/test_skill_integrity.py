@@ -92,6 +92,7 @@ class BundledResourceTests(unittest.TestCase):
             "scripts/find_latest_acc.py",
             "assets/acc-template.md",
             "assets/docs-acc-readme.md",
+            "assets/global-acc-readme.md",
         ):
             self.assertIn(path, self.referenced, f"SKILL.md no longer documents {path}")
 

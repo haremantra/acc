@@ -135,11 +135,11 @@ python scripts/find_latest_acc.py --global                # newest entry in the 
 python scripts/list_acc.py --global                       # browse the global archive
 ```
 
-The global location is `~/.claude/acc`, overridable with the `ACC_GLOBAL_DIR` environment variable. `--global` and `--dir` are mutually exclusive. The global archive holds only entries explicitly written with `--global` — per-project `docs/acc/` directories are never scanned into it. Each global entry is stamped with a `**Source project:**` line recording where it was produced.
+The global location is `~/.claude/acc`, overridable with the `ACC_GLOBAL_DIR` environment variable. `--global` and `--dir` are mutually exclusive. The global archive holds only entries explicitly written with `--global` — per-project `docs/acc/` directories are never scanned into it. Entries written by `new_acc.py --global` are stamped with a `**Source project:**` line recording where they were produced; entries predating the stamp (or written by hand) lack it.
 
-For the SessionStart hook, append `--global` to the command in `settings.json` to fall back to the shared archive. The project's own `docs/acc/` still takes precedence — the global archive is consulted only when the project has no checkpoints — and a globally-sourced checkpoint is injected with a preamble that names its source project and frames it as background context rather than work to continue, so a session in project B can't be misdirected into continuing project A's work. When the hook does read the global archive it logs the resolved directory to stderr, and it warns if `$ACC_GLOBAL_DIR` points outside your home directory.
+For the SessionStart hook, append `--global` to the command in `settings.json` to fall back to the shared archive. The project's own `docs/acc/` still takes precedence — the global archive is consulted only when the project has no checkpoints — and a globally-sourced checkpoint is injected with a preamble that names its source project (or says it came from an unspecified project when the entry carries no stamp) and frames it as background context rather than work to continue, so a session in project B can't be misdirected into continuing project A's work. Every archive read the hook makes under `--global` is logged to stderr, and a global archive outside your home directory is refused outright — a hostile workspace can set `ACC_GLOBAL_DIR`, so out-of-home locations load only if you opt in with `ACC_GLOBAL_ALLOW_OUTSIDE_HOME=1`.
 
-Checkpoints in the global archive still travel between projects by design — keep the per-project default for anything that shouldn't.
+Two trust notes. Checkpoints in the global archive travel between projects by design — keep the per-project default for anything that shouldn't. And the hook trusts a project's own `docs/acc/` the same way Claude Code trusts the rest of a repo's config (its `CLAUDE.md`, for example): opening a session in a repo means its checkpoints can be injected, in any hook mode — don't wire the hook for repos you don't trust.
 
 ## Layout
 
@@ -169,11 +169,16 @@ test suite (no `pip` install needed). From the repo root:
 python -m unittest discover -s tests
 ```
 
-The suite covers two layers. `test_scripts.py` pins the behaviors the
+The suite covers three layers. `test_scripts.py` pins the behaviors the
 helper scripts must get right every time: latest-entry selection
 (lexicographic sort, `README.md` excluded) and next-entry numbering
 (zero-padded, monotonic), plus slug generation, template substitution,
-and exit codes. `test_skill_integrity.py` validates the bundle itself —
+and exit codes. `test_usability.py` exercises the SessionStart hook
+end-to-end — archive resolution and project-before-global precedence,
+fail-open exit behavior, stderr provenance logging — and pins both
+injected preamble formats (project-local vs. globally-sourced), since
+that framing is part of the hook's security surface.
+`test_skill_integrity.py` validates the bundle itself —
 SKILL.md frontmatter, that every bundled file it advertises exists, and
 that every `{{TOKEN}}` the scaffolder substitutes is present in the
 template (so a rename never ships a literal `{{DATE}}` to users).
@@ -235,7 +240,7 @@ git -c safe.directory=<absolute-path-to-repo> <command>
 ```
 
 **`acc` entries are landing in the wrong project.**
-The scripts write to `./docs/acc/` relative to the current working directory at the moment the skill runs, not to a global location. If entries end up in the wrong place, check Claude Code's working directory.
+By default the scripts write to `./docs/acc/` relative to the current working directory at the moment the skill runs — not to a global location unless `--global` was passed (see "Global vs per-project archive" above). If entries end up in the wrong place, check Claude Code's working directory.
 
 ## When not to use this
 

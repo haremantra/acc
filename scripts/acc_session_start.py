@@ -21,9 +21,10 @@ Behavior:
     to the project so transcripts don't carry the machine layout.
   * If there's no archive/entry, prints nothing (no context injected) — no
     "starting fresh" noise on every project that doesn't use ACC.
-  * Reads from the global archive are surfaced on stderr — louder when
-    $ACC_GLOBAL_DIR points outside the home directory — so a redirected
-    archive is visible rather than silent.
+  * Reads from the global archive are surfaced on stderr, and an archive
+    outside the home directory is refused outright (env vars can be set by
+    a hostile workspace) unless ACC_GLOBAL_ALLOW_OUTSIDE_HOME=1 opts in —
+    so a redirected archive is blocked, not just visible.
 
 It is deliberately bulletproof: after argument parsing, any error results in
 a clean exit 0 with no stdout, so a hook misfire can never block session
@@ -95,18 +96,38 @@ def _display_path(latest: Path, base: Path) -> str:
         return str(latest)
 
 
-def _surface_global_read(gdir: Path) -> None:
-    """Make a (possibly redirected) global-archive read visible on stderr."""
+def _is_under_home(path: Path) -> bool:
+    try:
+        path.relative_to(Path.home().resolve())
+        return True
+    except (ValueError, RuntimeError):
+        # RuntimeError: Path.home() undeterminable — fail closed.
+        return False
+
+
+def _surface_global_read(gdir: Path) -> bool:
+    """Make a (possibly redirected) global-archive read visible on stderr and
+    decide whether to load from it. Outside the home directory the archive is
+    refused — a hostile workspace can set $ACC_GLOBAL_DIR, and the hook's
+    framing is a trusted channel — unless ACC_GLOBAL_ALLOW_OUTSIDE_HOME=1."""
     suffix = " (set by $ACC_GLOBAL_DIR)" if "ACC_GLOBAL_DIR" in os.environ else ""
     print(f"acc_session_start: reading global archive {gdir}{suffix}", file=sys.stderr)
-    try:
-        gdir.relative_to(Path.home().resolve())
-    except ValueError:
+    if _is_under_home(gdir):
+        return True
+    if os.environ.get("ACC_GLOBAL_ALLOW_OUTSIDE_HOME") == "1":
         print(
-            f"acc_session_start: warning: {gdir} is outside your home directory — "
-            "only trust this location if you pointed $ACC_GLOBAL_DIR there yourself",
+            f"acc_session_start: warning: {gdir} is outside your home directory; "
+            "loading anyway because ACC_GLOBAL_ALLOW_OUTSIDE_HOME=1",
             file=sys.stderr,
         )
+        return True
+    print(
+        f"acc_session_start: refusing to load {gdir}: it is outside your home "
+        "directory and could be attacker-controlled — set "
+        "ACC_GLOBAL_ALLOW_OUTSIDE_HOME=1 if you trust it",
+        file=sys.stderr,
+    )
+    return False
 
 
 def build_context(latest: Path, display: str, *, from_global: bool = False) -> str:
@@ -120,7 +141,12 @@ def build_context(latest: Path, display: str, *, from_global: bool = False) -> s
         body = encoded[:MAX_BYTES].decode("utf-8", errors="ignore")
         body += "\n\n[...truncated; open the file for the full entry]"
     if from_global:
-        produced_in = f"`{source_match.group(1)}`" if source_match else "an unspecified project"
+        # The stamp value comes from the (possibly attacker-controlled) entry;
+        # strip backticks so it cannot escape its code span and speak in the
+        # hook's voice, and cap length so it cannot dominate the preamble.
+        raw = source_match.group(1) if source_match else ""
+        clean = raw.replace("`", "").strip()[:200]
+        produced_in = f"`{clean}`" if clean else "an unspecified project"
         return (
             f"Inherited cross-project context, auto-loaded from the global ACC "
             f"archive ({display}) by the ACC SessionStart hook. This checkpoint "
@@ -163,11 +189,19 @@ def main(argv: list[str] | None = None) -> int:
         else:
             base = Path(_cwd_from_stdin() or os.getcwd()).resolve()
             latest = find_latest(base / "docs" / "acc")
-            if latest is None and args.use_global:
-                gdir = global_dir().resolve()
-                _surface_global_read(gdir)
-                latest = find_latest(gdir)
-                from_global = latest is not None
+            if args.use_global:
+                if latest is not None:
+                    print(
+                        f"acc_session_start: using project archive "
+                        f"{base / 'docs' / 'acc'} (takes precedence over the "
+                        f"global archive)",
+                        file=sys.stderr,
+                    )
+                else:
+                    gdir = global_dir().resolve()
+                    if _surface_global_read(gdir):
+                        latest = find_latest(gdir)
+                        from_global = latest is not None
 
         if latest is None:
             return 0  # Silent: nothing to inherit.

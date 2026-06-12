@@ -3,7 +3,8 @@
 This directory is the **cross-project** ACC archive: lossy, high-signal session
 checkpoints written with `--global`, shared across every project on this
 machine. The location is overridable with the `ACC_GLOBAL_DIR` environment
-variable.
+variable; the SessionStart hook refuses locations outside your home directory
+unless `ACC_GLOBAL_ALLOW_OUTSIDE_HOME=1` is set.
 
 ## Naming convention
 
@@ -21,9 +22,10 @@ recent entry. Tooling relies on this — do not rename files out of sequence.
 ## What lands here
 
 Only entries explicitly written with `new_acc.py --global`. Per-project
-`docs/acc/` archives are separate and are never scanned into this one. Each
-global entry carries a `**Source project:**` line recording where it was
-produced, so consumers can tell whose work a checkpoint describes.
+`docs/acc/` archives are separate and are never scanned into this one.
+Entries written by `new_acc.py --global` carry a `**Source project:**` line
+recording where they were produced; the SessionStart hook announces
+unstamped entries as coming from an unspecified project.
 
 ## Lifecycle
 
