@@ -116,6 +116,33 @@ Typing `/acc invoke-last` every time is easy to forget. A `SessionStart` hook ma
 
 On Windows use `python` and `%USERPROFILE%`. The hook is exit-0-safe (a misfire never blocks startup) and stays silent in projects with no archive, so it's safe to set globally in `~/.claude/settings.json`. `matcher: "startup"` fires on new sessions only, not resumes.
 
+## Auto-snapshot before compaction (optional)
+
+The SessionStart hook covers one end of a session; compaction is the other. When a session approaches the context limit, Claude Code replaces its history with a summary — and if no checkpoint was written first, any later ACC is produced *from that summary* instead of from the full window. A `PreCompact` hook closes the gap: it copies the raw transcript to `docs/acc/_snapshots/` (gitignored — transcripts can contain secrets — and pruned to the newest 5) in the moment between "compaction decided" and "history rewritten", so a checkpoint can always be reconstructed from full fidelity. On *auto*-compaction it also asks the model to write the checkpoint right then, while the window is still intact; on manual `/compact` it stays quiet (you chose the timing) and just takes the insurance copy. Copy `assets/pre-compact-settings.json` into the project's `.claude/settings.json`:
+
+```jsonc
+{
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          { "type": "command", "command": "python3 \"$HOME/.claude/skills/acc/scripts/acc_pre_compact.py\"", "timeout": 10 }
+        ]
+      },
+      {
+        "matcher": "manual",
+        "hooks": [
+          { "type": "command", "command": "python3 \"$HOME/.claude/skills/acc/scripts/acc_pre_compact.py\" --snapshot-only", "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Same conventions as the SessionStart hook: `python` and `%USERPROFILE%` on Windows, exit-0-safe (a misfire never blocks compaction). Whether the auto-compaction nudge reaches the model before the summary pass is harness-dependent — the snapshot is the guarantee; the nudge is best-effort.
+
 ## Browse the archive
 
 Once an archive has more than a handful of entries:
