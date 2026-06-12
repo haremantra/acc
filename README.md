@@ -2,13 +2,13 @@
 
 [![CI](https://github.com/haremantra/acc/actions/workflows/ci.yml/badge.svg)](https://github.com/haremantra/acc/actions/workflows/ci.yml)
 
-A Claude Code skill for ending a session and not having to re-explain it to the next one.
+A session checkpoint for Claude Code. Five sections, one file, replay-free resume.
 
 ## What it does
 
-Long sessions end and the next thread starts cold. Auto-compaction summarizes away the load-bearing parts (the decisions, the things you already tried and ruled out), so even a compacted replay loses the most expensive context. `acc` writes a small artifact at the end of a session that the next thread loads as inherited context. Replay isn't necessary anymore.
+Long sessions end and the next thread starts cold. Auto-compaction summarizes away the load-bearing parts — the decisions, the things you tried and ruled out — so even a compacted replay loses the most expensive context. `acc` writes a session checkpoint at end-of-session that the next thread loads as inherited context. You resume from your reasoning, not from a replay of the transcript.
 
-Average run: about 150k tokens of conversation down to about 1k. The artifact is at most 800 words, in five fixed sections.
+The checkpoint is at most 800 words in five fixed sections. A typical session goes from ~150k tokens to ~1k.
 
 | Section | What goes here |
 |---|---|

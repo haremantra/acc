@@ -109,7 +109,7 @@ python "<skill-dir>/scripts/new_acc.py" --topic <slug> --focus "<focus area>"
 Then **fill the five sections** in that file (the script scaffolds the skeleton only) and replace the `{{TOKENS_BEFORE}}` / `{{TOKENS_AFTER}}` placeholders with your estimates. The canonical format is `assets/acc-template.md`; its shape is:
 
 ```markdown
-# Context Compression — [date]
+# Session Checkpoint — [date]
 **Focus:** [focus area or "full session"]
 **Token estimate before:** ~[estimate]k
 **Token estimate after:** ~[estimate]k
