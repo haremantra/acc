@@ -258,6 +258,32 @@ class GlobalArchiveTests(unittest.TestCase):
             os.environ.pop("ACC_GLOBAL_DIR", None)
             self.assertEqual(new_acc.global_dir(), Path.home() / ".claude" / "acc")
 
+    def test_global_dir_agrees_across_all_four_scripts(self) -> None:
+        # global_dir() is duplicated per script (standalone-script design); pin
+        # the four copies together so they cannot drift — the find_latest()
+        # duplication already required a two-site fix once (PR #4).
+        modules = [new_acc, find_latest_acc, _load("list_acc"), _load("acc_session_start")]
+        for module in modules:
+            with self.subTest(module=module.__name__, env="set"):
+                self.assertEqual(module.global_dir(), self.global_dir)
+        with mock.patch.dict(os.environ):
+            os.environ.pop("ACC_GLOBAL_DIR", None)
+            expected = Path.home() / ".claude" / "acc"
+            for module in modules:
+                with self.subTest(module=module.__name__, env="unset"):
+                    self.assertEqual(module.global_dir(), expected)
+
+    def test_dir_and_global_mutually_exclusive_in_readers(self) -> None:
+        # new_acc and acc_session_start pin this elsewhere; cover the two
+        # remaining copies of the copy-pasted flag wiring.
+        for module in (find_latest_acc, _load("list_acc")):
+            with self.subTest(module=module.__name__):
+                err = StringIO()
+                with self.assertRaises(SystemExit) as ctx, redirect_stderr(err):
+                    module.main(["--dir", str(self.global_dir), "--global"])
+                self.assertEqual(ctx.exception.code, 2)
+                self.assertIn("not allowed with", err.getvalue())
+
     def test_new_acc_global_writes_to_global_archive(self) -> None:
         buf = StringIO()
         with redirect_stdout(buf):

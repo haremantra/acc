@@ -137,6 +137,8 @@ python scripts/list_acc.py --global                       # browse the global ar
 
 The global location is `~/.claude/acc`, overridable with the `ACC_GLOBAL_DIR` environment variable. `--global` and `--dir` are mutually exclusive. For the SessionStart hook, append `--global` to the command in `settings.json` to auto-load from the shared archive instead of the project one.
 
+Caution before wiring `--global` into the hook: it injects the newest checkpoint **across all projects** into every session — a session in project B inherits project A's checkpoint, and entries carry no source-project label. Keep the per-project default wherever checkpoints may contain context that shouldn't travel between projects.
+
 ## Layout
 
 | Path | Purpose |
