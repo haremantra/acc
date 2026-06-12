@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Find the newest ACC in docs/acc/ (Mode B helper for the /acc skill).
 
-Globs docs/acc/*.md (excluding README.md), sorts lexicographically, and prints the
-absolute path of the highest (newest) filename. Exits non-zero with a clear message
-if the archive is missing or empty.
+Globs docs/acc/*.md (excluding README.md and _*.md extractor outputs), sorts
+lexicographically, and prints the absolute path of the highest (newest) filename.
+Exits non-zero with a clear message if the archive is missing or empty.
 
 Usage:
     python find_latest_acc.py             # looks for ./docs/acc relative to cwd
@@ -20,7 +20,11 @@ from pathlib import Path
 def find_latest(acc_dir: Path) -> Path | None:
     if not acc_dir.is_dir():
         return None
-    candidates = sorted(p for p in acc_dir.glob("*.md") if p.name.lower() != "readme.md")
+    candidates = sorted(
+        p
+        for p in acc_dir.glob("*.md")
+        if p.name.lower() != "readme.md" and not p.name.startswith("_")
+    )
     return candidates[-1] if candidates else None
 
 

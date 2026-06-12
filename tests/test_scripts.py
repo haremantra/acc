@@ -84,6 +84,20 @@ class FindLatestTests(unittest.TestCase):
         _touch(self.dir, "readme.md")
         self.assertEqual(find_latest_acc.find_latest(self.dir), latest)
 
+    def test_extractor_outputs_excluded_even_though_they_sort_after_digits(self) -> None:
+        # '_' (0x5F) sorts after digits (0x30-0x39); without the exclusion the
+        # /acc-extract outputs (_ledger.md, _backlog.md, _avoid.md) would be
+        # wrongly chosen over the newest real entry.
+        latest = _touch(self.dir, "007-2026-06-11-fixes.md")
+        _touch(self.dir, "_ledger.md")
+        _touch(self.dir, "_backlog.md")
+        _touch(self.dir, "_avoid.md")
+        self.assertEqual(find_latest_acc.find_latest(self.dir), latest)
+
+    def test_only_extractor_outputs_returns_none(self) -> None:
+        _touch(self.dir, "_ledger.md")
+        self.assertIsNone(find_latest_acc.find_latest(self.dir))
+
     def test_main_missing_dir_exit_1(self) -> None:
         self.assertEqual(find_latest_acc.main(["--dir", str(self.dir / "nope")]), 1)
 
@@ -134,6 +148,7 @@ class NextSeqTests(unittest.TestCase):
     def test_ignores_non_sequence_names(self) -> None:
         _touch(self.dir, "README.md")
         _touch(self.dir, "notes.md")
+        _touch(self.dir, "_ledger.md")
         _touch(self.dir, "003-2026-01-01-c.md")
         self.assertEqual(new_acc.next_seq(self.dir), 4)
 

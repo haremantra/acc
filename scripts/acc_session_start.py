@@ -6,7 +6,8 @@ the most recent ACC without anyone remembering to run `/acc invoke-last`
 (Mode B, automated). See the README's "Auto-load on session start" section.
 
 Behavior:
-  * Finds the newest docs/acc/NNN-*.md (lexicographic, README.md excluded).
+  * Finds the newest docs/acc/NNN-*.md (lexicographic; README.md and _*.md
+    extractor outputs excluded).
   * If found, prints the SessionStart JSON envelope with the entry's content
     in `hookSpecificOutput.additionalContext`, which Claude Code injects into
     the session context.
@@ -38,7 +39,11 @@ MAX_BYTES = 16_000
 def find_latest(acc_dir: Path) -> Path | None:
     if not acc_dir.is_dir():
         return None
-    candidates = sorted(p for p in acc_dir.glob("*.md") if p.name.lower() != "readme.md")
+    candidates = sorted(
+        p
+        for p in acc_dir.glob("*.md")
+        if p.name.lower() != "readme.md" and not p.name.startswith("_")
+    )
     return candidates[-1] if candidates else None
 
 
