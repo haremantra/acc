@@ -8,6 +8,10 @@ it also drops the README seed (assets/docs-acc-readme.md) as docs/acc/README.md.
 
 The model fills the five body sections after this scaffolds the skeleton.
 
+Global entries (--global) are additionally stamped with a `**Source project:**`
+line recording the producing cwd, and the global archive is seeded with its own
+README (assets/global-acc-readme.md) instead of the project-oriented one.
+
 Usage:
     python new_acc.py --topic auth-rewrite
     python new_acc.py --topic auth-rewrite --focus "auth middleware" --date 2026-05-27
@@ -27,6 +31,7 @@ from pathlib import Path
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
 TEMPLATE = ASSETS / "acc-template.md"
 README_SEED = ASSETS / "docs-acc-readme.md"
+GLOBAL_README_SEED = ASSETS / "global-acc-readme.md"
 
 SEQ_RE = re.compile(r"^(\d{3,})-")
 
@@ -50,6 +55,19 @@ def next_seq(acc_dir: Path) -> int:
 def slugify(topic: str) -> str:
     s = re.sub(r"[^a-z0-9]+", "-", topic.strip().lower()).strip("-")
     return s or "session"
+
+
+def stamp_source(body: str, project: Path) -> str:
+    """Record the producing project in a global entry, right after the Focus
+    line, so the SessionStart hook can announce where a cross-project
+    checkpoint came from."""
+    lines = body.splitlines(keepends=True)
+    at = next(
+        (i + 1 for i, line in enumerate(lines) if line.startswith("**Focus:**")),
+        1 if lines else 0,
+    )
+    lines.insert(at, f"**Source project:** {project}\n")
+    return "".join(lines)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -102,13 +120,26 @@ def main(argv: list[str] | None = None) -> int:
 
     acc_dir.mkdir(parents=True, exist_ok=True)
 
-    # Seed the archive README on first run.
+    # Seed the archive README on first run; the global archive gets its own
+    # seed (it isn't a docs/acc/ and holds entries from many projects). A
+    # global README still byte-identical to the project seed was written by a
+    # version that predated the global seed — stale tool output, not user
+    # content — so replace it.
+    seed = GLOBAL_README_SEED if args.use_global else README_SEED
     readme = acc_dir / "README.md"
-    if not readme.exists() and README_SEED.is_file():
-        readme.write_text(README_SEED.read_text(encoding="utf-8"), encoding="utf-8")
+    stale = (
+        args.use_global
+        and readme.is_file()
+        and README_SEED.is_file()
+        and readme.read_text(encoding="utf-8") == README_SEED.read_text(encoding="utf-8")
+    )
+    if (not readme.exists() or stale) and seed.is_file():
+        readme.write_text(seed.read_text(encoding="utf-8"), encoding="utf-8")
 
     body = TEMPLATE.read_text(encoding="utf-8")
     body = body.replace("{{DATE}}", date).replace("{{FOCUS}}", focus)
+    if args.use_global:
+        body = stamp_source(body, Path.cwd())
     out.write_text(body, encoding="utf-8")
 
     print(out)
