@@ -169,10 +169,12 @@ This skill ships with helper files in its own directory (`<skill-dir>` = the fol
 | `scripts/find_latest_acc.py` | Mode B step 2 | Print the newest ACC path (glob + lexicographic sort, README excluded); non-zero if archive empty/missing |
 | `scripts/list_acc.py` | (browsing) | Print the archive as a dated, focus-labeled index; `--markdown` for a README table |
 | `scripts/acc_session_start.py` | (Mode B, automated) | SessionStart hook that auto-loads the latest ACC into a fresh session; exit-0-safe |
+| `scripts/acc_pre_compact.py` | (Mode A, automated) | PreCompact hook that snapshots the raw transcript to `docs/acc/_snapshots/` (gitignored, pruned) before compaction, and on auto-compaction nudges a checkpoint; exit-0-safe |
 | `assets/acc-template.md` | Step 3 | Canonical output skeleton with `{{DATE}}` / `{{FOCUS}}` / `{{TOKENS_*}}` tokens |
 | `assets/docs-acc-readme.md` | (by `new_acc.py`) | README seed dropped into `docs/acc/` on first run |
 | `assets/global-acc-readme.md` | (by `new_acc.py --global`) | README seed dropped into the global archive on first run |
 | `assets/session-start-settings.json` | (setup) | Example `.claude/settings.json` wiring the SessionStart hook |
+| `assets/pre-compact-settings.json` | (setup) | Example `.claude/settings.json` wiring the PreCompact hook |
 | `references/necessity-check.md` | Step 0 | The 9-criterion ACC-vs-HANDOFF rubric; read on demand |
 | `references/example-acc.md` | Step 1–2 | Good vs bad worked example; read to calibrate the quality bar |
 
