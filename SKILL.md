@@ -27,7 +27,7 @@ This skill has **two modes**. Read the argument first and pick the mode:
 The user wants to load a prior ACC into the current session as inherited context. Do NOT produce a new ACC.
 
 Steps:
-1. **Locate the archive directory.** Check `docs/acc/` in the current working directory. If it doesn't exist, report `No docs/acc/ archive found in current directory — nothing to invoke` and stop. Suggest the user `cd` into the right project or reference a specific ACC path.
+1. **Locate the archive directory.** Check `docs/acc/` in the current working directory. If it doesn't exist but the global archive does (`~/.claude/acc`, or `$ACC_GLOBAL_DIR` if set), use that instead — pass `--global` to the script in step 2. If neither exists, report `No docs/acc/ archive found in current directory (and no global archive) — nothing to invoke` and stop. Suggest the user `cd` into the right project or reference a specific ACC path.
 2. **Find the latest ACC.** From the project root, run `python "<skill-dir>/scripts/find_latest_acc.py"` (`python3` on macOS/Linux), where `<skill-dir>` is this skill's directory — see [Bundled resources](#bundled-resources). It globs `docs/acc/*.md`, excludes `README.md` and `_*.md` extractor outputs, sorts lexicographically, and prints the newest path; it exits non-zero with a message if the archive is missing or empty. (Add `--global` to read the cross-project archive at `~/.claude/acc` instead.) **Fallback** (if you can't run the script): glob `docs/acc/*.md` yourself, skip `README.md` and `_*.md` files, and take the lexicographically highest filename — convention `NNN-YYYY-MM-DD-topic.md`, so highest `NNN` is most recent.
 3. **Read the file** via the Read tool (full file, no offset/limit).
 4. **Acknowledge** in one or two sentences: *"Loaded ACC NNN — [date] [focus from header]. Continuing from there."* Surface any unblocked next-actions or open questions worth flagging.
@@ -171,6 +171,7 @@ This skill ships with helper files in its own directory (`<skill-dir>` = the fol
 | `scripts/acc_session_start.py` | (Mode B, automated) | SessionStart hook that auto-loads the latest ACC into a fresh session; exit-0-safe |
 | `assets/acc-template.md` | Step 3 | Canonical output skeleton with `{{DATE}}` / `{{FOCUS}}` / `{{TOKENS_*}}` tokens |
 | `assets/docs-acc-readme.md` | (by `new_acc.py`) | README seed dropped into `docs/acc/` on first run |
+| `assets/global-acc-readme.md` | (by `new_acc.py --global`) | README seed dropped into the global archive on first run |
 | `assets/session-start-settings.json` | (setup) | Example `.claude/settings.json` wiring the SessionStart hook |
 | `references/necessity-check.md` | Step 0 | The 9-criterion ACC-vs-HANDOFF rubric; read on demand |
 | `references/example-acc.md` | Step 1–2 | Good vs bad worked example; read to calibrate the quality bar |

@@ -308,6 +308,46 @@ class GlobalArchiveTests(unittest.TestCase):
             new_acc.main(["--topic", "beta", "--date", "2026-01-02", "--dir", str(project)])
         self.assertTrue((project / "001-2026-01-02-beta.md").is_file())
 
+    def test_global_entry_carries_source_stamp(self) -> None:
+        # Issue #6: global entries record the producing project so the
+        # SessionStart hook can announce where a checkpoint came from.
+        with redirect_stdout(StringIO()):
+            rc = new_acc.main(["--topic", "alpha", "--date", "2026-01-01", "--global"])
+        self.assertEqual(rc, 0)
+        body = (self.global_dir / "001-2026-01-01-alpha.md").read_text(encoding="utf-8")
+        self.assertIn(f"**Source project:** {Path.cwd()}", body)
+
+    def test_source_stamp_lands_after_focus_line(self) -> None:
+        with redirect_stdout(StringIO()):
+            new_acc.main(["--topic", "alpha", "--date", "2026-01-01", "--global"])
+        text = (self.global_dir / "001-2026-01-01-alpha.md").read_text(encoding="utf-8")
+        lines = text.splitlines()
+        focus_at = next(i for i, line in enumerate(lines) if line.startswith("**Focus:**"))
+        self.assertTrue(lines[focus_at + 1].startswith("**Source project:**"))
+
+    def test_project_entry_has_no_source_stamp(self) -> None:
+        project = Path(self._tmp.name) / "docs" / "acc"
+        with redirect_stdout(StringIO()):
+            new_acc.main(["--topic", "alpha", "--date", "2026-01-01", "--dir", str(project)])
+        body = (project / "001-2026-01-01-alpha.md").read_text(encoding="utf-8")
+        self.assertNotIn("**Source project:**", body)
+
+    def test_global_archive_gets_global_readme_seed(self) -> None:
+        # Issue #6 nit: the global archive must not be seeded with the
+        # project-oriented README (H1 "ACC Archive — `docs/acc/`").
+        with redirect_stdout(StringIO()):
+            new_acc.main(["--topic", "alpha", "--date", "2026-01-01", "--global"])
+        readme = (self.global_dir / "README.md").read_text(encoding="utf-8")
+        self.assertIn("ACC Global Archive", readme)
+        self.assertIn("Source project", readme)
+
+    def test_project_archive_keeps_project_readme_seed(self) -> None:
+        project = Path(self._tmp.name) / "docs" / "acc"
+        with redirect_stdout(StringIO()):
+            new_acc.main(["--topic", "alpha", "--date", "2026-01-01", "--dir", str(project)])
+        readme = (project / "README.md").read_text(encoding="utf-8")
+        self.assertIn("ACC Archive — `docs/acc/`", readme)
+
 
 if __name__ == "__main__":
     unittest.main()

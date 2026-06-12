@@ -131,13 +131,15 @@ By default every entry lands in `./docs/acc/` of the project you're in — check
 
 ```bash
 python scripts/new_acc.py --topic auth-rewrite --global   # writes ~/.claude/acc/NNN-…md
-python scripts/find_latest_acc.py --global                # newest across all projects
+python scripts/find_latest_acc.py --global                # newest entry in the global archive
 python scripts/list_acc.py --global                       # browse the global archive
 ```
 
-The global location is `~/.claude/acc`, overridable with the `ACC_GLOBAL_DIR` environment variable. `--global` and `--dir` are mutually exclusive. For the SessionStart hook, append `--global` to the command in `settings.json` to auto-load from the shared archive instead of the project one.
+The global location is `~/.claude/acc`, overridable with the `ACC_GLOBAL_DIR` environment variable. `--global` and `--dir` are mutually exclusive. The global archive holds only entries explicitly written with `--global` — per-project `docs/acc/` directories are never scanned into it. Each global entry is stamped with a `**Source project:**` line recording where it was produced.
 
-Caution before wiring `--global` into the hook: it injects the newest checkpoint **across all projects** into every session — a session in project B inherits project A's checkpoint, and entries carry no source-project label. Keep the per-project default wherever checkpoints may contain context that shouldn't travel between projects.
+For the SessionStart hook, append `--global` to the command in `settings.json` to fall back to the shared archive. The project's own `docs/acc/` still takes precedence — the global archive is consulted only when the project has no checkpoints — and a globally-sourced checkpoint is injected with a preamble that names its source project and frames it as background context rather than work to continue, so a session in project B can't be misdirected into continuing project A's work. When the hook does read the global archive it logs the resolved directory to stderr, and it warns if `$ACC_GLOBAL_DIR` points outside your home directory.
+
+Checkpoints in the global archive still travel between projects by design — keep the per-project default for anything that shouldn't.
 
 ## Layout
 
@@ -150,6 +152,7 @@ Caution before wiring `--global` into the hook: it injects the newest checkpoint
 | `scripts/acc_session_start.py` | SessionStart hook: auto-load the latest entry into a fresh session |
 | `assets/acc-template.md` | Canonical output skeleton |
 | `assets/docs-acc-readme.md` | README seed dropped into `docs/acc/` on first run |
+| `assets/global-acc-readme.md` | README seed dropped into the global archive on first run |
 | `assets/session-start-settings.json` | Example `.claude/settings.json` for the hook |
 | `references/necessity-check.md` | The Step 0 rubric, 9 criteria for `acc` vs. `HANDOFF` |
 | `references/example-acc.md` | Good vs. bad worked example |
