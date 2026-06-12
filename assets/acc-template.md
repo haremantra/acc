@@ -1,4 +1,4 @@
-# Context Compression — {{DATE}}
+# Session Checkpoint — {{DATE}}
 **Focus:** {{FOCUS}}
 **Token estimate before:** ~{{TOKENS_BEFORE}}k
 **Token estimate after:** ~{{TOKENS_AFTER}}k

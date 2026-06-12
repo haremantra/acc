@@ -34,7 +34,7 @@ acc_session_start = _load("acc_session_start")
 
 def _entry(directory: Path, name: str, focus: str | None = None) -> Path:
     p = directory / name
-    header = f"# Context Compression\n**Focus:** {focus}\n" if focus else "# no header\n"
+    header = f"# Session Checkpoint\n**Focus:** {focus}\n" if focus else "# no header\n"
     p.write_text(header, encoding="utf-8")
     return p
 

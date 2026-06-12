@@ -8,7 +8,7 @@ no recap of tooling or "how" — only what was decided, what exists, what's bloc
 ## Good ACC (tight, load-bearing)
 
 ```
-# Context Compression — 2026-05-20
+# Session Checkpoint — 2026-05-20
 **Focus:** auth middleware rewrite
 **Token estimate before:** ~110k
 **Token estimate after:** ~0.6k
@@ -41,7 +41,7 @@ no tool narration. File paths + test counts + branch state make re-discovery unn
 ## Bad ACC (padded, narrative, duplicates HANDOFF)
 
 ```
-# Context Compression — 2026-05-20
+# Session Checkpoint — 2026-05-20
 **Focus:** worked on auth stuff today
 
 ## Decisions
