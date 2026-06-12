@@ -61,6 +61,13 @@ class ListAccParseTests(unittest.TestCase):
         entries = list_acc.parse_entries(self.dir)
         self.assertEqual([e.seq for e in entries], ["003"])
 
+    def test_ignores_extractor_outputs(self) -> None:
+        _entry(self.dir, "_ledger.md", "x")
+        _entry(self.dir, "_backlog.md", "y")
+        _entry(self.dir, "004-2026-01-01-d.md", "d focus")
+        entries = list_acc.parse_entries(self.dir)
+        self.assertEqual([e.seq for e in entries], ["004"])
+
     def test_focus_parsed_from_header(self) -> None:
         _entry(self.dir, "001-2026-01-01-alpha.md", "the auth layer")
         self.assertEqual(list_acc.parse_entries(self.dir)[0].focus, "the auth layer")
@@ -126,6 +133,20 @@ class SessionStartHookTests(unittest.TestCase):
         _entry(self.dir, "README.md")
         latest = acc_session_start.find_latest(self.dir)
         self.assertEqual(latest.name, "001-2026-01-01-alpha.md")
+
+    def test_find_latest_excludes_extractor_outputs(self) -> None:
+        # In a project where /acc-extract has run, _ledger.md sorts after
+        # NNN-*.md; the hook must inject the newest checkpoint, not the index.
+        _entry(self.dir, "001-2026-01-01-alpha.md", "a")
+        _entry(self.dir, "_ledger.md", "decision log")
+        latest = acc_session_start.find_latest(self.dir)
+        self.assertEqual(latest.name, "001-2026-01-01-alpha.md")
+
+    def test_archive_with_only_extractor_outputs_is_silent(self) -> None:
+        _entry(self.dir, "_ledger.md", "decision log")
+        rc, out = self._run()
+        self.assertEqual(rc, 0)
+        self.assertEqual(out.strip(), "")
 
     def test_no_archive_is_silent_exit_0(self) -> None:
         rc, out = self._run()  # empty dir
